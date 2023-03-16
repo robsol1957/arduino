@@ -33,7 +33,9 @@ float   alpha=0.5;
 float   mintemp = 22;
 float   sleeptemp = 23.5;
 float   maxtemp = 24.5;
-unsigned long thistime;
+
+unsigned long thistime,lastsleep;
+unsigned long maxsleeptime=3500000;
 void initTCs() {
   //////////////////////////////////////////
   // Connect Thermocouples
@@ -133,13 +135,19 @@ void loop() {
         writetext("Sleep-off,"+String(smoothTemp));
         accontrol(int(1));
       }
-      } else if(airconState == 1) {
+      } else if(airconState == 1) {// on sleep
+        unsigned long lag=millis()-lastsleep;
+        writetext("time since last sleep on "+String(lag));
+        writetext("maxsleep time "+ String(maxsleeptime));
         if (smoothTemp > maxtemp){
           writetext("Sleep-Full,"+String(smoothTemp));
           accontrol(int(2)); 
         } else if (smoothTemp <mintemp){
           accontrol(int(0));
           writetext("Sleep-Off,"+String(smoothTemp));
+        } else if (lag >maxsleeptime){// still in sleep range but stable for 1 hr therefore reset
+          writetext("resume sleep"+String(lag));
+          accontrol(int(1));
         }
       } else if(airconState == 2){
         if(smoothTemp<mintemp){
@@ -173,6 +181,7 @@ if(Action==0) {
     delay(100);
     MyLG_Aircondition.sendCommandAndParameter('S', 420);
     airconState=1;
+    lastsleep=millis();
     digitalWrite(LED1, HIGH);
     digitalWrite(LED2,LOW);
   } else   if(Action==2){
