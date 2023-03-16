@@ -6,7 +6,8 @@
 #include <IRremote.hpp>
 #define INFO // Deactivate this to save program memory and suppress info output from the LG-AC driver.
 #include "ac_LG.hpp"
-
+//
+//
 #define LED1 8
 #define LED2 9
 #define ONE_WIRE_BUS 2 //For Thermocouples and one wire devices
