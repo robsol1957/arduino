@@ -1,42 +1,74 @@
-//#include <SD.h>
-//#include <SPI.h>
-//#include <virtuabotixRTC.h>
+/*
+ * General Constant temperature controller
+ * Controller Powered by DC voltage source between 5-20 volts
+ * Includes 4 Relays rated up to 240vAC- Take care that the controlled devices operate at the appropriate 
+ * inpur Voltage
+ * 
+ * Setpoint can be changed by pressing the Button an waiting up to 10 seconds then using the Rotary encoder or
+ * via serial port Command S
+ * Other parameters that can be changed are P,I and D Constants
+ * 
+ * Heater Relay is R0
+ * Fan Relay is R1
+ * 
+ * R Solomon 07/03/2021
+ * 
+ *
+ */
+ 
 #include "LedControl.h"
 #include "ESPRotary.h";
-#include "LedControl.h"
+//#include "LedControl.h"
 #include <OneWire.h> //one wire devices // For Thermocouples and other one wire devices
 #include <DallasTemperature.h> //Thermocpouples
+#include <DS1302.h>
+// Init the DS1302
+
+
+/**************** LED Pin Definitions ********
+ pin 12 is connected to the DIN DataIn 
+ pin 13 is connected to the CLK 
+pin 10 is connected to CS (LOAD)
+*/
+LedControl lc=LedControl(12,13,10,1);
+//DS1302(uint8_t rst_pin, uint8_t data_pin, uint8_t sclk_pin)
+DS1302 rtc(A1,A2, A3);
+
 #define ONE_WIRE_BUS 2 //For Thermocouples and one wire devices
-#define HEATRELAY 3
-#define ROTARY_PIN1  4//14
-#define ROTARY_PIN2 5//12
-#define Button  6
-#define LED_Pin 11
+#define ROTARY_PIN1 3 //Pin1 Rotary Encoder
+#define ROTARY_PIN2 4 //Pin2 Rotary Encoder
+#define Button  5     //Press button to adjust setpoint
+#define LED_Pin 11    //Switch to turn LED Display on
+
 #define TEMPERATURE_PRECISION 12
 #define HOURS 3600000  //milliseconds in an hour
 #define MINUTES 60000 //milliseconds in a minute
 #define SECONDS 1000  //milliseconds in a minute
+/* ***********  Relay Pins 
+ *  R0-3:= 6-9
+ *  In this instance Heater =Relay0
+ *  Fan = Relay 1
+ */
+int Relay[]= {6,7,8,9};
+#define HEATER 0 // relay 0 for heater
+#define COOLER 2 // relay 0 for heater
+#define FAN 1  // for fan
 
 OneWire oneWire(ONE_WIRE_BUS);// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 DallasTemperature sensors(&oneWire); // Pass our oneWire reference to Dallas Temperature.
 DeviceAddress tc[5]; // arrays to hold device addresses
 ESPRotary r = ESPRotary(ROTARY_PIN1, ROTARY_PIN2);
 
-/*
- ***** These pin numbers will probably not work with your hardware *****
- pin 12 is connected to the DIN DataIn 
- pin 13 is connected to the CLK 
- pin 10 is connected to CS (LOAD)
- We have only a single MAX72XX.
- */
-LedControl lc=LedControl(12,13,10,1);
+
+
 char __mathHelperBuffer[17];
 String filename = "Dummy"; // not used in this code
 
 int Nsensors;
-float  SetPoint=38;  //= 39.3;// target 38.9 possible calibration error of -0.8
+float  SetPoint=39.0;  //= 39.3;// target 38.9 possible calibration error of -0.8
 float kP = 5000;
-float kI = 0.006;
+//float kI = 0.006;
+float kI = 0.01;
 float MaxI = 10000;
 float kD = 1000;
 float FlashDur = 10000;
@@ -46,14 +78,17 @@ float Calib[][2] ={{0.0,1.0},{0.0,1.0}};
 unsigned long PulseStart, lasttime, thistime;
 String CycleStart;
 boolean HeaterState;
-//byte LEDStatus;
+byte LEDStatus;
 
 
 
 
 void setup() {
   Serial.begin(9600);
-  pinMode(HEATRELAY,OUTPUT);
+  for(int i=0;i<=3;i++){
+    pinMode(Relay[i],OUTPUT);
+    }
+  setupClck();
   r.setChangedHandler(rotate);
   r.setLeftRotationHandler(showDirection);
   r.setRightRotationHandler(showDirection);
@@ -61,16 +96,25 @@ void setup() {
   pinMode(LED_Pin,INPUT_PULLUP);
   
   initTCs();
-  lc.shutdown(0,false);
-  lc.setIntensity(0,8);
   
+  //for(int i=0;i<=7;i++){
+  //  pinMode(DecPins[i],INPUT_PULLUP);
+  //  }
+  if(!digitalRead(LED_Pin)){
+      LEDStatus=true;
+      lc.shutdown(0,false);
+      lc.setIntensity(0,8);
+  } else{
+    LEDStatus=false;
+  }
 
   /* and clear the display */
   lc.clearDisplay(0);
+  CycleStart = datestring();
   printtofile(filename, "kP," + String(kP,6));
   printtofile(filename, "kI," + String(kI,6));
   printtofile(filename, "kD," + String(kD,6));
-  
+  digitalWrite(Relay[FAN], HIGH);
 }
 
 void loop() {
@@ -81,10 +125,22 @@ void loop() {
   printtofile(filename, "Setpoint," + String(SetPoint));
   CycleStart = datestring();
   AvgTemp = getTemp();
-  writetemp(SetPoint,AvgTemp);
+    if(!digitalRead(LED_Pin)){//LED Switch on
+      if(!LEDStatus){// but LED OFF
+        LEDStatus=true; // Switch LED On
+        lc.shutdown(0,false);
+        lc.setIntensity(0,8);
+      }
+    writetemp(SetPoint,AvgTemp);
+  } else {// switch off
+    if(LEDStatus){
+      lc.shutdown(0,true);
+      LEDStatus=false;
+    }
+  }
+  
   thistime = millis();
   dt = float(thistime - lasttime);
-  //printtofile(filename, "dt," + String(dt));
   lasttime = thistime;
   lastError = Error;
   Error = SetPoint - AvgTemp;
@@ -96,7 +152,6 @@ void loop() {
     //I = MaxI*abs(I)/I;
     printtofile(filename, "Trimmed I," + String(I));
   }
-  
   printtofile(filename, "i," + String(I));
   printtofile(filename, "p," + String(p));
   d = kD * (Error - lastError) / FlashDur;
@@ -114,23 +169,39 @@ void loop() {
   printtofile(filename, "pidTrim," + String(pid));
   if (pid > 0) {
     printtofile(filename, "HeaterStatus,1");
-    digitalWrite(HEATRELAY, HIGH);
+    digitalWrite(Relay[HEATER], HIGH);
     delay(long(pid));
   }
 
   if (off > 0) {
     printtofile(filename, "HeaterStatus,0");
-    digitalWrite(HEATRELAY, LOW);
+    digitalWrite(Relay[HEATER], LOW);
     delay(long(off));
   }
    Serial.println(" ");
 }
 
-
+void setupClck()
+{
+  // Set the clock to run-mode, and disable the write protection
+  rtc.halt(false);
+  rtc.writeProtect(false);
+  // The following lines can be commented out to use the values already stored in the DS1302
+/*
+  rtc.setDOW(THURSDAY);        // Set Day-of-Week to FRIDAY
+  rtc.setTime(16, 11, 0);     // Set the time to 12:00:00 (24hr format)
+  rtc.setDate(11, 3, 2021);   // Set the date to August 6th, 2010
+*/
+}
 
 
 
 float getsp() {
+   if(LEDStatus==false){
+   lc.shutdown(0,false);
+   lc.setIntensity(0,8);
+   LEDStatus=true;
+   }
   lc.clearDisplay(0);
   displayDigit( SetPoint,2,4);
   long et=millis()+1000;
@@ -145,14 +216,14 @@ float getsp() {
 }
 // on change
 void rotate(ESPRotary& r) {
- //  Serial.println(r.getPosition());
-   SetPoint=38+float(r.getPosition())/20;
-   Serial.println(SetPoint);
+ //Serial.println(r.getPosition());
+   SetPoint=38-float(r.getPosition())/40;
+ //  Serial.println(SetPoint);
 }
 
 // on left or right rotattion
 void showDirection(ESPRotary& r) {
-  //Serial.println(r.directionToString(r.getDirection()));
+ // Serial.println(r.directionToString(r.getDirection()));
 }
 float getTemp()
 {
@@ -183,7 +254,9 @@ String fixed(int val,int digits) {
   r=r.substring(r.length()-digits);
   return (r);
 }
+
 String datestring() {
+  /*
   unsigned long millisecfromStart=millis();
   int hoursfromStart=millisecfromStart/HOURS;
   millisecfromStart=millisecfromStart-hoursfromStart*HOURS;
@@ -192,6 +265,10 @@ String datestring() {
   int secondsfromstart = millisecfromStart/SECONDS;
   int msfromstart=millisecfromStart-secondsfromstart*SECONDS;
   String s=fixed(hoursfromStart,2)+":" + fixed(minutesfromstart,2) + ":"+ fixed(secondsfromstart,2) + "." + fixed(msfromstart, 3);
+  */
+  Time t = rtc.getTime();
+  String s=String(t.year)+"-"+fixed(t.mon,2)+"-"+fixed(t.date,2) +" "+fixed(t.hour,2)+":"+fixed(t.min,2)+":"+fixed(t.sec,2);
+  
   return (s);
 }
 
