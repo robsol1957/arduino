@@ -30,9 +30,9 @@ DeviceAddress tc[5]; // arrays to hold device addresses
 int Nsensors,airconState;
 float   smoothTemp;
 float   alpha=0.5;
-float   mintemp = 22;
-float   sleeptemp = 23.5;
-float   maxtemp = 24.5;
+float   mintemp = 21;
+float   sleeptemp = 22.5;
+float   maxtemp = 23.5;
 
 unsigned long thistime,lastsleep;
 unsigned long maxsleeptime=3500000;
