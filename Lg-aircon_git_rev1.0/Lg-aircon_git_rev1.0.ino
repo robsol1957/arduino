@@ -27,12 +27,15 @@ Aircondition_LG MyLG_Aircondition;
 
 
 DeviceAddress tc[5]; // arrays to hold device addresses
+
+float   tempoffset = -1;
 int Nsensors,airconState;
 float   smoothTemp;
 float   alpha=0.5;
-float   mintemp = 21;
-float   sleeptemp = 22.5;
-float   maxtemp = 23.5;
+float   mintemp = 22;
+float   sleeptemp = 23.5;
+float   maxtemp = 24.5;
+
 
 unsigned long thistime,lastsleep;
 unsigned long maxsleeptime=3500000;
@@ -115,6 +118,10 @@ void setup() {
 // Start running
 // Initially test to see if temp is outside of deadband and set aircon state appropriately.
 // If in side deadband then just leave alone
+
+mintemp += tempoffset;
+sleeptemp += tempoffset;
+maxtemp += tempoffset;
  airconState=0;
  smoothTemp=getTemp();
  accontrol(int(2));
@@ -177,7 +184,7 @@ if(Action==0) {
     Serial.println("Turning sleep");
     MyLG_Aircondition.sendCommandAndParameter('1', 0);
     delay(100);
-    MyLG_Aircondition.sendCommandAndParameter('t', 22);
+    MyLG_Aircondition.sendCommandAndParameter('t', mintemp);
     delay(100);
     MyLG_Aircondition.sendCommandAndParameter('S', 420);
     airconState=1;
@@ -190,7 +197,7 @@ if(Action==0) {
     delay(100);
     MyLG_Aircondition.sendCommandAndParameter('1', 0);
     delay(100);
-    MyLG_Aircondition.sendCommandAndParameter('t', 22);
+    MyLG_Aircondition.sendCommandAndParameter('t', mintemp);
     delay(100);
     MyLG_Aircondition.sendCommandAndParameter('f', 1);
     airconState=2;
