@@ -28,7 +28,7 @@ Aircondition_LG MyLG_Aircondition;
 
 DeviceAddress tc[5]; // arrays to hold device addresses
 
-float   tempoffset = -1;
+float   tempoffset = -2;
 int Nsensors,airconState;
 float   smoothTemp;
 float   alpha=0.5;
