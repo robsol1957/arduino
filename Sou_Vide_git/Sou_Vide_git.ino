@@ -65,7 +65,7 @@ char __mathHelperBuffer[17];
 String filename = "Dummy"; // not used in this code
 
 int Nsensors;
-float  SetPoint=39.0;  //= 39.3;// target 38.9 possible calibration error of -0.8
+float  SetPoint=63.0;  //= 39.3;// target 38.9 possible calibration error of -0.8
 float kP = 5000;
 //float kI = 0.006;
 float kI = 0.01;
@@ -233,13 +233,20 @@ float getTemp()
   sensors.requestTemperatures();
   for (i = 0; i < Nsensors; ++i) {
     tempC = sensors.getTempC(tc[i]);
-   // printtofile(filename, "TCRaw" + String(i) + "," + String(tempC, 4));
+    //printtofile(filename, "TCRaw " + String(i) + "," + String(tempC, 4));
     tempC=(tempC-Calib[i][0])/Calib[i][1];
-   // printtofile(filename, "TC" + String(i) + "," + String(tempC, 4));
+    printtofile(filename, "TC " + String(i) + "," + String(tempC, 4));
     //Serial.println("TC" + String(i) + "," + String(tempC, 4));
+      if(tempC<10){
+        tempC=SetPoint+1;
+        printtofile(filename,"Sensor has blown, cap temp******************");
+        }
     result = result + tempC;
   }
+  
   result = result / float(Nsensors);
+  // check blown sensor
+
   printtofile(filename, "AvgTemp," + String(result, 4));
   return (result);
 }
