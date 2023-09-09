@@ -2,7 +2,7 @@
 #define BUZERPIN 3
 #define SWITCHPIN 4
 #define DECPIN  5  // low bite
-
+#define divisor 2  //factor for dividing dev times
  //////////////////////////////////////////////////
 void pulse(unsigned long dur){
   
@@ -80,7 +80,7 @@ void timer(){
   
   program=read_dec(); // read programe
   triple(program+1,1000); // echo back program
-  
+  duration[program][0]=duration[program][0]/divisor
   //wait 30 seconds with 10 second countdown
   wait(millis()+30000,10,1000);
   this_event=0;
