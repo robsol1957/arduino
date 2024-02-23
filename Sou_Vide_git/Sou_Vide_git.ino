@@ -65,7 +65,7 @@ char __mathHelperBuffer[17];
 String filename = "Dummy"; // not used in this code
 
 int Nsensors;
-float  SetPoint=63.0;  //= 39.3;// target 38.9 possible calibration error of -0.8
+float  SetPoint=64.0;  //= 39.3;// target 38.9 possible calibration error of -0.8
 float kP = 5000;
 //float kI = 0.006;
 float kI = 0.01;
@@ -161,6 +161,7 @@ void loop() {
   if (pid <= 0) {
     pid = 0;
   }
+  //pid=0; debug
   off = FlashDur - pid;
   if (pid > FlashDur) {
     pid = FlashDur;
@@ -179,6 +180,7 @@ void loop() {
     delay(long(off));
   }
    Serial.println(" ");
+  // delay(1000000);// debug
 }
 
 void setupClck()
@@ -233,8 +235,8 @@ float getTemp()
   sensors.requestTemperatures();
   for (i = 0; i < Nsensors; ++i) {
     tempC = sensors.getTempC(tc[i]);
-    //printtofile(filename, "TCRaw " + String(i) + "," + String(tempC, 4));
-    tempC=(tempC-Calib[i][0])/Calib[i][1];
+   // printtofile(filename, "TCRaw " + String(i) + "," + String(tempC, 4));
+    //tempC=(tempC-Calib[i][0])/Calib[i][1];
     printtofile(filename, "TC " + String(i) + "," + String(tempC, 4));
     //Serial.println("TC" + String(i) + "," + String(tempC, 4));
       if(tempC<10){

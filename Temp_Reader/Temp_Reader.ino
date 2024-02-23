@@ -6,9 +6,9 @@
 
 
 /**************** LED Pin Definitions ********
- pin 12 is connected to the DIN DataIn 
- pin 13 is connected to the CLK 
-pin 10 is connected to CS (LOAD)
+#define LCD_DIN 12  //miso Master in Slave out
+#define LCD_CLK 13 //sck
+#define LCD_CS 10 //ss - slave select
 */
 LedControl lc=LedControl(12,13,10,1);
 
@@ -33,6 +33,7 @@ void setup() {
 
 void loop() {
   float AvgTemp = getTemp();
+  lc.clearDisplay(0);
   displayDigit( AvgTemp,2,0);
   Serial.println(AvgTemp);
   delay(1000);
