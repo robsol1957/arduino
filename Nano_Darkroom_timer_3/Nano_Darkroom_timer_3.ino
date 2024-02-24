@@ -23,9 +23,9 @@ int lastStateCLK;
   pin 10 is connected to CS (LOAD)
 */
 
-#define LCD_DIN 11
-#define LCD_CLK 13
-#define LCD_CS 10
+#define LCD_DIN 12  //mosi Master Out Slave In
+#define LCD_CLK 13 //sck
+#define LCD_CS 10 //ss - slave select
 
 char __mathHelperBuffer[17];
 float stage[4];
@@ -52,7 +52,7 @@ void setup() {
   pinMode(DT, INPUT);
   pinMode(SW, INPUT_PULLUP);
 
- 
+
 
   // Read the initial state of CLK
   lastStateCLK = digitalRead(CLK);
@@ -60,28 +60,41 @@ void setup() {
   /////////////////////////////////////////////////////
   // LCD Display
   ////////////////////////////////////////////////////
- // pinMode(LCD_DIN, OUTPUT);
- // pinMode(LCD_CLK, OUTPUT);
+  // pinMode(LCD_DIN, OUTPUT);
+  // pinMode(LCD_CLK, OUTPUT);
   pinMode(LCD_CS, OUTPUT);
 
   lc.shutdown(0, false);
   lc.setIntensity(0, 8);
   lc.clearDisplay(0);
 
+  ///////////////////////////
+  // Toggle Pin
+  ////////////////////////////
+
+  pinMode(TOGGLEPIN, INPUT_PULLUP);
+  pinMode(BUZERPIN, OUTPUT);
+  Serial.println("restart");
   /// Start of block code
   //
   // Get and update delay durations
+  //read_enc_change(500, 1);  // debug
+  //get_enc_val(500,1,SW);
   get_delays(); // update the inputs
   //////////////////////////////////////////////////
   // Hang until the button pressed
   /////////////////////////////////////////////////
-  /*
-  int was = digitalRead(TOGGLEPIN);
-  do {
-  } while (digitalRead(TOGGLEPIN) == was);
+
+  Serial.println("Wait button press");
+  pulse(100);
+  while (check_button_press(TOGGLEPIN) == false) {
+  }
+  Serial.println("button pressed");
+  pulse(100);
   //Alert that buzzer has been pressed before jumping to timer.
   //wait 30 seconds with 10 second countdown
-  wait(millis() + 30000, 10, 1000);
+  wait(millis() + 1000, 10, 1000);
+  lc.setIntensity(0, 0);
   int this_event = 0;
   unsigned long run_start = millis();
   while (stage[this_event] > 0) {
@@ -90,23 +103,23 @@ void setup() {
     while (event_end > next_Agitate + 15000) {
       wait(next_Agitate, 3, 1000); // three pulses just prior to next agitate
       next_Agitate = millis() + agitate_period;
+      int remain_steps = round((event_end - millis()) / agitate_period);
+      Serial.println(remain_steps);
+      triple(remain_steps, 200);
+      displayDigit_clr((event_end - millis()) / 1000, 0, 0);
+      delay(200);
+      lc.clearDisplay(0);
     };
     wait(event_end, 10, 1000);
+
     run_start = event_end;
     ++this_event;
   }
   pulse(100);
-  */
-  lc.shutdown(0, false);
 }
 
 void loop() {
- lc.setIntensity(0, 0);
-
-  displayDigit_clr(300, 0, 0);
-  delay(10);
-  lc.clearDisplay(0);
-  delay(30000);
+  wait(millis() + 10000, 3, 1000);
 }
 
 /////////////////////////////////////////////
@@ -115,23 +128,24 @@ void loop() {
 
 void get_delays() {
   int i;
-  stage[0] = get_enc_val(500, 1, SW);
+  stage[0] = get_enc_val(500, 2, TOGGLEPIN, 1);
   Serial.println(stage[0]);
-  stage[1] = get_enc_val(60, 1, SW);
+  stage[1] = get_enc_val(60, 1, TOGGLEPIN, 2);
   Serial.println(stage[1]);
-  stage[2] = get_enc_val(300, 1, SW);
+  stage[2] = get_enc_val(300, 1, TOGGLEPIN, 3);
   Serial.println(stage[2]);
-  Serial.println("Shutting led down");
-  stage[3]=0;
+
+  stage[3] = 0;
   for (i = 0; i < 4; ++i) {
+    Serial.println(i);
     Serial.println(stage[i]);
     lc.clearDisplay(0);
     delay(100);
     displayDigit_clr(stage[i], 1, 0);
     delay(1000);
   }
-
-  lc.shutdown(0, true);
+  Serial.println("clear display");
+  lc.clearDisplay(0);
 }
 
 
@@ -149,7 +163,7 @@ void wait(unsigned long thisend, int pulses, int dur) {
 // Buzzer utils
 //////////////////////////////////////////////////
 void pulse(unsigned long dur) {
-
+  Serial.println("buzzing");
   digitalWrite(BUZERPIN, HIGH);
   delay(dur);
   digitalWrite(BUZERPIN, LOW);
@@ -171,7 +185,7 @@ void triple(int times, unsigned long dur) {
 //////////////////////////////////////////////////////////
 // Rotary Encoder utility routines
 /////////////////////////////////////////////////////////
-float get_enc_val(float value, float factor, int button) {
+float get_enc_val(float value, float factor, int button, int stage) {
   int digs = 0;
   displayDigit_clr(value, digs, 0);
   while (check_button_press(button) == false) {
@@ -180,6 +194,8 @@ float get_enc_val(float value, float factor, int button) {
     if (old_value != value) {
       Serial.print(" value: ");
       Serial.println(value);
+      Serial.print(" : factor: ");
+      Serial.println(factor);
       displayDigit_clr(value, digs, 0);
     }
   }
@@ -190,6 +206,12 @@ float get_enc_val(float value, float factor, int button) {
 
 float read_enc_change(float value, float factor) {
   int currentStateCLK = digitalRead(CLK);
+  /*
+    Serial.print("currentState=");
+    Serial.println(currentStateCLK);
+    Serial.print("laststate=");
+    Serial.println(lastStateCLK);
+  */
   if (currentStateCLK != lastStateCLK  && currentStateCLK == 1) {
     if (digitalRead(DT) != currentStateCLK) {
       value = value + factor;
@@ -202,13 +224,28 @@ float read_enc_change(float value, float factor) {
 }
 bool check_button_press(int button) {
   bool ret = true;
+  int debounce = 200, c;
   unsigned long enter = millis();
   int btnState = digitalRead(button);
-  while (btnState == LOW && millis() < enter + 50) {
+  c = 1;
+  while (btnState == LOW && millis() < enter + debounce) {
+    pulse(100);
     btnState = digitalRead(button);
+    ++c;
+    if (c < 100) {
+      Serial.print(button);
+    } else {
+      c = 1;
+      Serial.println(button);
+    }
   }
-  if (millis() < enter + 50) {
+  if (millis() < enter + debounce) {
     ret = false;
+  } else { // Button was pressed but don't return until released
+    btnState = digitalRead(button);
+    while (btnState == LOW ) {
+      btnState = digitalRead(button);
+    }
   }
   return (ret);
 }
@@ -309,17 +346,17 @@ char * sci(double number, int digits)
 */
 void displayDigit(double _inVal_, int _DecPoints_, int dispPos) {
   String c; //Single character variable to send to the display module
-  int  i,val;
+  int  i, val;
   bool dpf;
   String pt = ".";
   String s = String(_inVal_, _DecPoints_);
- 
+
   if (s.length() > 8) { // if the number more than 8 digits convert it to scientific notation.
     s = sci(_inVal_, 2);
   }
   int len = int(s.length());
   for (i = len - 1; i >= 0; --i) { // start from the back end of the string
-    c = s.substring(i, i+1);
+    c = s.substring(i, i + 1);
 
     if ( c == pt) { /*if the character is a decimal point set the decimal point flag to true and read the character to the left of the decimal point*/
       --i;      //Skip to the next character to the left
@@ -328,8 +365,8 @@ void displayDigit(double _inVal_, int _DecPoints_, int dispPos) {
     } else {
       dpf = false;
     }
-    val=c.toInt();
-   lc.setDigit(0, dispPos, val, dpf);
+    val = c.toInt();
+    lc.setDigit(0, dispPos, val, dpf);
     ++dispPos;
   }
 }

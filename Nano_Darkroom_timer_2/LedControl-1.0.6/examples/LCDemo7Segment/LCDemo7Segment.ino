@@ -9,10 +9,10 @@
  pin 10 is connected to LOAD 
  We have only a single MAX72XX.
  */
-LedControl lc=LedControl(12,11,10,1);
+LedControl lc=LedControl(12,13,10,1);
 
 /* we always wait a bit between updates of the display */
-unsigned long delaytime=250;
+unsigned long delaytime=1000;
 
 void setup() {
   /*
@@ -68,6 +68,6 @@ void scrollDigits() {
 }
 
 void loop() { 
-  writeArduinoOn7Segment();
+  //writeArduinoOn7Segment();
   scrollDigits();
 }

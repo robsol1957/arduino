@@ -22,6 +22,11 @@ int lastStateCLK;
   pin 13 is connected to the CLK
   pin 10 is connected to CS (LOAD)
 */
+
+#define LCD_DIN 11
+#define LCD_CLK 13
+#define LCD_CS 10
+
 char __mathHelperBuffer[17];
 float stage[4];
 #include "LedControl.h"
@@ -47,16 +52,22 @@ void setup() {
   pinMode(DT, INPUT);
   pinMode(SW, INPUT_PULLUP);
 
+ 
+
   // Read the initial state of CLK
   lastStateCLK = digitalRead(CLK);
 
   /////////////////////////////////////////////////////
   // LCD Display
   ////////////////////////////////////////////////////
+ // pinMode(LCD_DIN, OUTPUT);
+ // pinMode(LCD_CLK, OUTPUT);
+  pinMode(LCD_CS, OUTPUT);
 
   lc.shutdown(0, false);
   lc.setIntensity(0, 8);
   lc.clearDisplay(0);
+
   /// Start of block code
   //
   // Get and update delay durations
@@ -105,6 +116,7 @@ void get_delays() {
   Serial.println("Shutting led down");
   stage[3]=0;
   for (i = 0; i < 4; ++i) {
+    Serial.println(stage[i]);
     lc.clearDisplay(0);
     delay(100);
     displayDigit_clr(stage[i], 1, 0);
@@ -152,7 +164,7 @@ void triple(int times, unsigned long dur) {
 // Rotary Encoder utility routines
 /////////////////////////////////////////////////////////
 float get_enc_val(float value, float factor, int button) {
-  int digs = 2;
+  int digs = 0;
   displayDigit_clr(value, digs, 0);
   while (check_button_press(button) == false) {
     float old_value = value;
@@ -310,7 +322,7 @@ void displayDigit(double _inVal_, int _DecPoints_, int dispPos) {
     lc.setChar(0, dispPos, c, dpf);
     ++dispPos;
   }
-  //delay(delaytime);
+  delay(100);
 }
 
 void writetemp(double _inVal1_, double _inVal2_) {
@@ -321,6 +333,8 @@ void writetemp(double _inVal1_, double _inVal2_) {
 }
 
 void displayDigit_clr(double _inVal_, int _DecPoints_, int dispPos) {
-  lc.clearDisplay(0);
+  //lc.clearDisplay(0);
+  Serial.print("disp dig :");
+  Serial.println(_inVal_);
   displayDigit( _inVal_, _DecPoints_, dispPos);
 }
