@@ -35,7 +35,9 @@ float   alpha = 0.5;
 float   mintemp = 22;
 float   sleeptemp = 23;
 float   maxtemp = 24;
+long  dontmod = 3600/2*1000;
 
+long nexttime =0;
 
 unsigned long thistime, lastsleep;
 unsigned long maxsleeptime = 3500000;
@@ -137,11 +139,11 @@ void loop() {
   writetext("min temp," + String(mintemp));
   writetext("max temp," + String(maxtemp));
   writetext("sleep temp," + String(sleeptemp));
-  if (airconState == 0 ) {
+  if (airconState == 0 ) {// off
     if ( smoothTemp > maxtemp) {
       writetext("Off-Full," + String(smoothTemp));
       accontrol(int(2));
-    } else if ( smoothTemp > sleeptemp) {
+    } else if ( smoothTemp > sleeptemp & millis()>nexttime) {
       writetext("Sleep-off," + String(smoothTemp));
       accontrol(int(1));
     }
@@ -149,11 +151,11 @@ void loop() {
     if (smoothTemp > maxtemp) {
       writetext("Sleep-> Full," + String(smoothTemp));
       accontrol(int(2));
-    } else if (smoothTemp < mintemp) {
+    } else if (smoothTemp < mintemp & millis()>nexttime) {//turn off
       accontrol(int(0));
       writetext("Sleep-Off," + String(smoothTemp));
     }
-  } else if (airconState == 2 & smoothTemp < mintemp+0.1) {
+  } else if (airconState == 2 & smoothTemp < mintemp+0.1) { // on max and just above mintemp
         accontrol(int(1));
         writetext("Full->Sleep," + String(smoothTemp));
     }
@@ -164,6 +166,7 @@ void loop() {
 
   void accontrol(int Action) {
     //  Serial.println("In control loop "+String(Action));
+    
     if (Action == 0) {
       Serial.println("Turning off");
       MyLG_Aircondition.sendCommandAndParameter('0', 0);
@@ -194,4 +197,5 @@ void loop() {
       digitalWrite(LED1, LOW);
       digitalWrite(LED2, HIGH);
     }
+    nexttime = nexttime+dontmod;
   }
