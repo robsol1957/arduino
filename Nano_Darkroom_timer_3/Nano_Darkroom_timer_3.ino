@@ -88,6 +88,7 @@ void setup() {
   Serial.println("Wait button press");
   pulse(100);
   while (check_button_press(TOGGLEPIN) == false) {
+    //Serial.println("Wait");
   }
   Serial.println("button pressed");
   pulse(100);
@@ -128,11 +129,11 @@ void loop() {
 
 void get_delays() {
   int i;
-  stage[0] = get_enc_val(500, 2, TOGGLEPIN, 1);
+  stage[0] = get_enc_val(720, 2, TOGGLEPIN, 1);
   Serial.println(stage[0]);
   stage[1] = get_enc_val(60, 1, TOGGLEPIN, 2);
   Serial.println(stage[1]);
-  stage[2] = get_enc_val(300, 1, TOGGLEPIN, 3);
+  stage[2] = get_enc_val(600, 1, TOGGLEPIN, 3);
   Serial.println(stage[2]);
 
   stage[3] = 0;

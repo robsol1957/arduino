@@ -65,7 +65,7 @@ char __mathHelperBuffer[17];
 String filename = "Dummy"; // not used in this code
 
 int Nsensors;
-float  SetPoint=64.0;  //= 39.3;// target 38.9 possible calibration error of -0.8
+float  SetPoint=20.0;  //= 39.3;// target 38.9 possible calibration error of -0.8
 float kP = 5000;
 //float kI = 0.006;
 float kI = 0.01;
