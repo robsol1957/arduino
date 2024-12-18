@@ -115,7 +115,6 @@ void setup() {
 }
 
 
-
 void loop() {
   // put your main code here, to run repeatedly:
    
@@ -165,7 +164,8 @@ if(Action==0) {
     delay(100);
     MyLG_Aircondition.sendCommandAndParameter('t', mintemp);
     delay(100);
-    MyLG_Aircondition.sendCommandAndParameter('S', 420);
+    MyLG_Aircondition.sendCommandAndParameter('f', 0);
+    //MyLG_Aircondition.sendCommandAndParameter('S', 420);
     airconState=1;
   } else   if(Action==2){
     Serial.println("Turning full");
@@ -175,7 +175,7 @@ if(Action==0) {
     delay(100);
     MyLG_Aircondition.sendCommandAndParameter('t', mintemp);
     delay(100);
-    MyLG_Aircondition.sendCommandAndParameter('f', 1);
+    MyLG_Aircondition.sendCommandAndParameter('f', 2);
     airconState=2;
   }
  }
